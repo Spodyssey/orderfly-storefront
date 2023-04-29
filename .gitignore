@@ -1,0 +1,9 @@
+__pycache__
+*.txt
+*.csv
+/resources
+*.html
+*.spec
+# Compiled output
+/build
+/dist
