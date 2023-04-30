@@ -1,15 +1,15 @@
 import csv, datetime, getopt, logging, os, random, requests, sys
 from bs4 import BeautifulSoup
 
-logDirectory = 'resources/app/logs/'
-dataDirectory = 'resources/app/data/'
+logDirectory = 'resources\\app\\logs\\'
+storefrontsDataDirectory = 'resources\\app\\data\\storefronts\\'
 
 # If the logs directory does not exist, create it
 if not os.path.exists(logDirectory):
    os.makedirs(logDirectory)
 
-if not os.path.exists(dataDirectory):
-   os.makedirs(dataDirectory)
+if not os.path.exists(storefrontsDataDirectory):
+   os.makedirs(storefrontsDataDirectory)
 
 # Configure Logging
 # TODO - Figure out logging configuration for printing both to file and console by log level
@@ -31,15 +31,15 @@ def main(argv):
         pages = arg
 
    logging.info(f'Requested marketplace ID: { marketplaceID }')
-   logging.info(f'Requested page(s): { pages }')
-   
+#    logging.info(f'Requested page(s): { pages }')
+
    scrapeMarketplace(marketplaceID, pages)
 
 #
 #
 #   
 def scrapeMarketplace(marketplaceID, pages):
-    
+
     # Only first 10 of each is tested (Chrome ^52.0.2762.73 | FireFox ^72.0)
     USER_AGENTS = [
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.5112.79 Safari/537.36",    # Chrome 104.0.5112.79
@@ -108,13 +108,13 @@ def scrapeMarketplace(marketplaceID, pages):
     try:        
         paginationElement = soup.find('span', class_='s-pagination-strip')
         spanElements = paginationElement.find_all('span')
-        
+
         if (len(spanElements) == 4):
             numberOfPages = int(spanElements[len(spanElements) - 1].text.strip())
         else:
             pageLinks = paginationElement.find_all('a')
             numberOfPages = int(pageLinks[len(pageLinks) - 2].text.strip())
-            
+
         logging.info(f'Found { str(numberOfPages) } pages for marketplace ID: { marketplaceID }')
     except:
         logging.fatal(f'Failed to retrieve number of pages for marketplace ID: { marketplaceID }')
@@ -128,11 +128,11 @@ def scrapeMarketplace(marketplaceID, pages):
             'User-Agent': random.choice(USER_AGENTS),
             'Accept-Language': 'en-US, en;q=0.5'
         }
-        
+
         url = baseURL + "&page=" + str(currentPage)
         html = requests.get(url, headers=HEADERS)
         soup = BeautifulSoup(html.text, features="html.parser")
-        
+
         item_elements = soup.find_all('a', {'class': 'a-link-normal s-underline-text s-underline-link-text s-link-style a-text-normal'})
         logging.info(f'Found { str(len(item_elements)) } items on page { str(currentPage) }')
 
@@ -147,8 +147,15 @@ def scrapeMarketplace(marketplaceID, pages):
         currentPage += 1
 
     # Export results to CSV file
+    # For some reason adding a \\ between storefrontsdirectory and marketplaceID adds an extra \\ to the string...
+    storefrontPath = storefrontsDataDirectory + marketplaceID + '\\'
+    if not os.path.exists(storefrontPath):
+        os.makedirs(storefrontPath)
+
+    csvFileName = datetime.datetime.now().strftime('%Y-%d-%m-%H%M%S') + '.csv'
+    csvFilePath = storefrontPath + csvFileName
     try:
-        with open(dataDirectory + marketplaceID + '-' + datetime.datetime.now().strftime('%Y%d%m%H%M%S') + '.csv', 'w', newline='') as csvFile:
+        with open(csvFilePath, 'w', newline='') as csvFile:
             fieldnames = [ 'item_name', 'asin', 'url' ]
             writer = csv.DictWriter(csvFile, fieldnames=fieldnames)
             writer.writeheader()
@@ -156,8 +163,10 @@ def scrapeMarketplace(marketplaceID, pages):
             # Write each result in the array of results
             for item in items:
                 writer.writerow(item)
+
+        print(csvFilePath)
     except:
-        print(f'Failed to write items!')
-        
+        logging.fatal(f'Failed to write items!')
+
 if __name__ == "__main__":
    main(sys.argv[1:])
