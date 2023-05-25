@@ -1,6 +1,8 @@
 import csv, datetime, getopt, logging, os, random, requests, sys
 from bs4 import BeautifulSoup
 
+from models.marketplace import Marketplace
+
 logDirectory = 'resources\\app\\logs\\'
 storefrontsDataDirectory = 'resources\\app\\data\\storefronts\\'
 
@@ -11,34 +13,41 @@ if not os.path.exists(logDirectory):
 if not os.path.exists(storefrontsDataDirectory):
    os.makedirs(storefrontsDataDirectory)
 
-# Configure Logging
-# TODO - Figure out logging configuration for printing both to file and console by log level
-logging.basicConfig(filename=logDirectory + 'orderfly-storefront.log', encoding='utf-8', level=logging.DEBUG, format='[%(levelname)s] %(asctime)s: %(message)s')
-
 def main(argv):
-   marketplaceID = ''
-   pages = ''
+    
+    # Set initial values
+    logging_level = logging.INFO
+    marketplaces = []
+    pages = ''
 
-   opts, args = getopt.getopt(argv,"hm:p:",["marketplaceID=","pages="])
+    opts, args = getopt.getopt(argv,"hdm:p:",["debug=","marketplaceIDs=","pages="])
 
-   for opt, arg in opts:
-      if opt == '-h':
-        print ('main.py -m <marketplaceID>, -p <pages>')
-        sys.exit()
-      elif opt in ("-m", "--marketplaceID"):
-        marketplaceID = arg
-      elif opt in ("-p", "--pages"):
-        pages = arg
+    for opt, arg in opts:
+        if opt == '-h':
+            print ('main.py --debug -m <marketplaceID>, -p <pages>')
+            sys.exit()
+        elif opt in ("-d", "--debug"): # Set debug mode for logging
+            logging_level = logging.DEBUG
+        elif opt in ("-m", "--marketplaceIDs"):
+            # Read each marketplace ID value (split by ,) from the command line
+            requestedMarketplaceIDs = arg.split(',')
+            for marketplaceID in requestedMarketplaceIDs:
+                marketplaces.append(Marketplace(marketplaceID))
+        elif opt in ("-p", "--pages"):
+            # TODO 
+            pages = arg
 
-   logging.info(f'Requested marketplace ID: { marketplaceID }')
-#    logging.info(f'Requested page(s): { pages }')
+    logging.basicConfig(filename=logDirectory + 'orderfly-storefront.log', encoding='utf-8', level=logging_level, format='[%(levelname)s] %(asctime)s: %(message)s')
 
-   scrapeMarketplace(marketplaceID, pages)
+    for marketplace in marketplaces:
+        logging.info(f'Requested marketplace ID: { marketplace.id }')
+        # logging.info(f'Requested page(s): { pages }')
+        scrapeMarketplace(marketplace, pages)
 
+###
 #
-#
-#   
-def scrapeMarketplace(marketplaceID, pages):
+###
+def scrapeMarketplace(marketplace, pages):
 
     # Only first 10 of each is tested (Chrome ^52.0.2762.73 | FireFox ^72.0)
     USER_AGENTS = [
@@ -99,31 +108,17 @@ def scrapeMarketplace(marketplaceID, pages):
         'Accept-Language': 'en-US, en;q=0.5'
     }
 
-    baseURL = f"https://www.amazon.com/s?&me={ marketplaceID }"
-    html = requests.get(baseURL, headers=HEADERS)
-    soup = BeautifulSoup(html.text, features="html.parser")
-    numberOfPages = 0
+    baseURL = f"https://www.amazon.com/s?&me={ marketplace.id }"
 
-    # Find the number of pages that a store front has
-    try:        
-        paginationElement = soup.find('span', class_='s-pagination-strip')
-        spanElements = paginationElement.find_all('span')
-
-        if (len(spanElements) == 4):
-            numberOfPages = int(spanElements[len(spanElements) - 1].text.strip())
-        else:
-            pageLinks = paginationElement.find_all('a')
-            numberOfPages = int(pageLinks[len(pageLinks) - 2].text.strip())
-
-        logging.info(f'Found { str(numberOfPages) } pages for marketplace ID: { marketplaceID }')
-    except:
-        logging.fatal(f'Failed to retrieve number of pages for marketplace ID: { marketplaceID }')
+    # Find the number of pages for a marketplace    
+    marketplace.find_number_of_pages(baseURL, HEADERS)
+    logging.info(f'Found { str(marketplace.number_of_pages) } pages!')
 
     # For each page
     currentPage = 1
     items = []
 
-    while currentPage < numberOfPages + 1:
+    while currentPage < marketplace.number_of_pages + 1:
         HEADERS = {
             'User-Agent': random.choice(USER_AGENTS),
             'Accept-Language': 'en-US, en;q=0.5'
@@ -148,7 +143,7 @@ def scrapeMarketplace(marketplaceID, pages):
 
     # Export results to CSV file
     # For some reason adding a \\ between storefrontsdirectory and marketplaceID adds an extra \\ to the string...
-    storefrontPath = storefrontsDataDirectory + marketplaceID + '\\'
+    storefrontPath = storefrontsDataDirectory + marketplace.id + '\\'
     if not os.path.exists(storefrontPath):
         os.makedirs(storefrontPath)
 
