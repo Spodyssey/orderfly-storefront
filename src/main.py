@@ -1,5 +1,6 @@
 import csv, datetime, getopt, logging, os, random, requests, sys
 from bs4 import BeautifulSoup
+from models.item import Item
 
 from models.marketplace import Marketplace
 
@@ -13,6 +14,9 @@ if not os.path.exists(logDirectory):
 if not os.path.exists(storefrontsDataDirectory):
    os.makedirs(storefrontsDataDirectory)
 
+###
+#
+###
 def main(argv):
     
     # Set initial values
@@ -134,10 +138,11 @@ def scrapeMarketplace(marketplace, pages):
         for item_element in item_elements:
             href = item_element.get('href')
             href = href.split('/ref')[0]
-            full_url = 'https://amazon.com' + href.split('`/')[0].split('">')[0]
-            title = href.split('`/')[0].replace('/', '').split('dp')[0].replace('-', ' ')
+            listing_url = 'https://amazon.com' + href.split('`/')[0].split('">')[0]
+            item_name = href.split('`/')[0].replace('/', '').split('dp')[0].replace('-', ' ')
             asin = href.split('/dp/')[1].split('/')[0]
-            items.append({'item_name': title, 'asin': asin, 'url': full_url})
+            
+            items.append(Item(item_name, asin, listing_url))
         
         currentPage += 1
 
@@ -149,17 +154,20 @@ def scrapeMarketplace(marketplace, pages):
 
     csvFileName = datetime.datetime.now().strftime('%Y-%d-%m-%H%M%S') + '.csv'
     csvFilePath = storefrontPath + csvFileName
+
     try:
         with open(csvFilePath, 'w', newline='') as csvFile:
-            fieldnames = [ 'item_name', 'asin', 'url' ]
+            fieldnames = [ 'item_name', 'asin', 'listing_url' ]
             writer = csv.DictWriter(csvFile, fieldnames=fieldnames)
             writer.writeheader()
-                                
-            # Write each result in the array of results
-            for item in items:
-                writer.writerow(item)
 
-        print(csvFilePath)
+            for item in items:
+                writer.writerow({
+                    'item_name': item.name, 
+                    'asin': item.asin, 
+                    'listing_url': item.listing_url
+                })
+                
     except:
         logging.fatal(f'Failed to write items!')
 
