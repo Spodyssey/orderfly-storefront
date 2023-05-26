@@ -1,15 +1,65 @@
-import datetime
-import logging
-import sqlite3
+import logging, requests, sqlite3
 from bs4 import BeautifulSoup
 
-import requests
+class MarketplaceDAO:
+    def __init__(self, db_file):
+        self.db_file = db_file
+        self.conn = sqlite3.connect(db_file)
+        self.cursor = self.conn.cursor()
+        self._create_table_if_not_exists()
 
+    def _create_table_if_not_exists(self):
+        create_table_query = '''
+            CREATE TABLE IF NOT EXISTS marketplace (
+                id TEXT,
+                last_updated_date DATE,
+                PRIMARY KEY (id)
+            )
+        '''
+        self.cursor.execute(create_table_query)
+        self.conn.commit()
+
+    def create(self, marketplace):
+        insert_query = '''
+            INSERT INTO marketplace (id, last_updated_date)
+            VALUES (?, ?)
+        '''
+        self.cursor.execute(insert_query, (marketplace.id, marketplace.last_updated_date))
+        self.conn.commit()
+
+    def read(self, marketplace_id):
+        select_query = '''
+            SELECT * FROM marketplace WHERE id = ?
+        '''
+        self.cursor.execute(select_query, (marketplace_id,))
+        row = self.cursor.fetchone()
+        if row:
+            marketplace_id, last_updated_date = row
+            return Marketplace(marketplace_id, last_updated_date)
+        else:
+            return None
+
+    def update(self, marketplace):
+        update_query = '''
+            UPDATE marketplace SET last_updated_date = ? WHERE id = ?
+        '''
+        self.cursor.execute(update_query, (marketplace.last_updated_date, marketplace.id))
+        self.conn.commit()
+
+    def delete(self, marketplace_id):
+        delete_query = '''
+            DELETE FROM marketplace WHERE id = ?
+        '''
+        self.cursor.execute(delete_query, (marketplace_id,))
+        self.conn.commit()
+
+    def close(self):
+        self.conn.close()
 
 class Marketplace:
-    
-    def __init__(self, id):
+    def __init__(self, id, last_updated_date):
         self.id = id
+        self.last_updated_date = last_updated_date
         self.number_of_pages = 0
     
     ###################################################################################################
@@ -63,16 +113,3 @@ class Marketplace:
                 totalPages = int(pageLinks[len(pageLinks) - 2].text.strip())
 
         self.number_of_pages = totalPages
-        
-    def insert_into_db(self, dataDirectory):
-        try:
-            database_connection = sqlite3.connect(dataDirectory)
-            cursor = database_connection.cursor()
-            insert_statement = "INSERT OR REPLACE INTO marketplace (id, last_updated_date) VALUES (?, ?)"
-    
-            # Insert into table
-            cursor.execute(insert_statement, (self.id, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")))
-            database_connection.commit()
-        except:
-            logging.debug(self)
-            logging.fatal(f'Failed to insert or replace Marketplace record!')

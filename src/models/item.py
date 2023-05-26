@@ -1,21 +1,65 @@
-import datetime, sqlite3
-import logging
+import sqlite3
+
+class ItemDAO:
+    def __init__(self, db_file):
+        self.db_file = db_file
+        self.conn = sqlite3.connect(db_file)
+        self.cursor = self.conn.cursor()
+        self._create_table_if_not_exists()
+
+    def _create_table_if_not_exists(self):
+        create_table_query = '''
+            CREATE TABLE IF NOT EXISTS item (
+                asin TEXT,
+                last_updated_date DATE,
+                listing_url TEXT,
+                name TEXT,
+                PRIMARY KEY (asin)
+            )
+        '''
+        self.cursor.execute(create_table_query)
+        self.conn.commit()
+
+    def create(self, item):
+        insert_query = '''
+            INSERT INTO item (asin, last_updated_date, listing_url, name)
+            VALUES (?, ?, ?, ?)
+        '''
+        self.cursor.execute(insert_query, (item.asin, item.last_updated_date, item.listing_url, item.name))
+        self.conn.commit()
+
+    def read(self, item_asin):
+        select_query = '''
+            SELECT * FROM item WHERE asin = ?
+        '''
+        self.cursor.execute(select_query, (item_asin,))
+        row = self.cursor.fetchone()
+        if row:
+            asin, last_updated_date, listing_url, name = row
+            return Item(asin, last_updated_date, listing_url, name)
+        else:
+            return None
+
+    def update(self, item):
+        update_query = '''
+            UPDATE item SET last_updated_date = ?, listing_url = ?, name = ?, WHERE asin = ?
+        '''
+        self.cursor.execute(update_query, (item.last_updated_date, item.listing_url, item.name, item.asin))
+        self.conn.commit()
+
+    def delete(self, item_asin):
+        delete_query = '''
+            DELETE FROM item WHERE asin = ?
+        '''
+        self.cursor.execute(delete_query, (item_asin,))
+        self.conn.commit()
+
+    def close(self):
+        self.conn.close()
 
 class Item:
-    
-    def __init__(self, name, asin, listing_url):
-        self.name = name
+    def __init__(self, asin, last_updated_date, listing_url, name):
         self.asin = asin
+        self.last_updated_date = last_updated_date
         self.listing_url = listing_url
-        
-    def insert_into_db(self, dataDirectory):
-        try:
-            database_connection = sqlite3.connect(dataDirectory)
-            cursor = database_connection.cursor()
-            insert_statement = "INSERT OR REPLACE INTO item (asin, name, listing_url, last_found_date) VALUES (?, ?, ?, ?)"
-            # Insert into table
-            cursor.execute(insert_statement, (self.asin, self.name, self.listing_url, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")))
-            database_connection.commit()
-        except:
-            logging.debug(self)
-            logging.fatal(f'Failed to insert or replace Marketplace record!')
+        self.name = name,

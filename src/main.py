@@ -1,9 +1,8 @@
-import csv, datetime, getopt, logging, os, random, requests, sys, sqlite3
+import datetime, getopt, logging, os, random, requests, sys
 from bs4 import BeautifulSoup
-from models.inventory import Inventory
-from models.item import Item
-
-from models.marketplace import Marketplace
+from models.inventory import Inventory, InventoryDAO
+from models.item import Item, ItemDAO
+from models.marketplace import Marketplace, MarketplaceDAO
 
 logDirectory = 'resources\\app\\logs\\'
 dataDirectory = 'resources\\app\\data\\'
@@ -16,24 +15,16 @@ if not os.path.exists(logDirectory):
 if not os.path.exists(dataDirectory):
    os.makedirs(dataDirectory)
 
-###
-#
-###
 def main(argv):
-
-    database_connection = sqlite3.connect(marketplaceDBDirectory)
-    
-    # Create database
-    createDatabase(database_connection)    
-    
+        
     # Set initial values
     logging_level = logging.INFO
-    marketplaces = []
+    requested_marketplaces = []
     pages = ''
     items = list[Item]
 
+    # Parse Arugments
     opts, args = getopt.getopt(argv,"hdm:p:",["debug=","marketplaceIDs=","pages="])
-
     for opt, arg in opts:
         if opt == '-h':
             print ('main.py --debug -m <marketplaceID>, -p <pages>')
@@ -44,28 +35,61 @@ def main(argv):
             # Read each marketplace ID value (split by ,) from the command line
             requestedMarketplaceIDs = arg.split(',')
             for marketplaceID in requestedMarketplaceIDs:
-                marketplaces.append(Marketplace(marketplaceID))
+                requested_marketplaces.append(Marketplace(marketplaceID, datetime.datetime.now(datetime.timezone.utc)))
         elif opt in ("-p", "--pages"):
             # TODO 
             pages = arg
 
+    # Set logging level
     logging.basicConfig(filename=logDirectory + 'orderfly-storefront.log', encoding='utf-8', level=logging_level, format='[%(levelname)s] %(asctime)s: %(message)s')
 
-    for marketplace in marketplaces:
-        logging.info(f'Requested marketplace ID: { marketplace.id }')
-        marketplace.insert_into_db(marketplaceDBDirectory)
+    # Create database access objects
+    marketplaceDAO = MarketplaceDAO(marketplaceDBDirectory)
+    itemDAO = ItemDAO(marketplaceDBDirectory)
+    inventoryDAO = InventoryDAO(marketplaceDBDirectory)
+
+    # For each marketplace
+    marketplace = Marketplace
+    for requested_marketplace in requested_marketplaces:
+
+        # Try to create a new record in the database
+        try:
+            marketplaceDAO.create(requested_marketplace)
+        except:
+            logging.warning(f'Failed to create a new record in the MARKETPLACE table! One may already exist!')
+            logging.debug(f'Marketplace ID: { requested_marketplace.id }')
+        
+        # Check for an existing marketplace record in the database
+        try:
+            marketplace = marketplaceDAO.read(requested_marketplace.id)
+        except:
+            logging.warning(f'Failed to retrieve a record from the MARKETPLACE table!')
+            logging.debug(f'Marketplace ID: { requested_marketplace.id }')
 
         # For each item a marketplace has, add it to the corresponding tables
         items = scrapeMarketplaceItems(marketplace, pages)
         for item in items:
-            item.insert_into_db(marketplaceDBDirectory)
+            
+            # Try to create a new record in the database
+            try:
+                itemDAO.create(item)
+            except:
+                logging.warning(f'Failed to create a new record in the ITEM table! One may already exist!')
+                
+            # Check for an existing marketplace record in the database
+            try:
+                item = itemDAO.read(item.asin)
+            except:
+                logging.warning(f'Failed to retrieve a record from the ITEM table!')
+                logging.debug(f'Item ASIN: { item.asin }')
         
-        # Insert marketplace Inventory into the database
-        Inventory(datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H"), marketplace.id, items).insert_into_db(marketplaceDBDirectory)
+        # Insert Marketplace Inventory
 
-###
-#
-###
+    # Close database connetions
+    marketplaceDAO.close()
+    itemDAO.close()
+    inventoryDAO.close()
+
 def scrapeMarketplaceItems(marketplace, pages):
     
     # Only first 10 of each is tested (Chrome ^52.0.2762.73 | FireFox ^72.0)
@@ -156,56 +180,13 @@ def scrapeMarketplaceItems(marketplace, pages):
             listing_url = 'https://amazon.com' + href.split('`/')[0].split('">')[0]
             item_name = href.split('`/')[0].replace('/', '').split('dp')[0].replace('-', ' ')
             asin = href.split('/dp/')[1].split('/')[0]
+            last_updated_date = datetime.datetime.now(datetime.timezone.utc)
             
-            items.append(Item(item_name, asin, listing_url))
+            items.append(Item(asin, last_updated_date, listing_url, item_name))
         
         currentPage += 1
         
     return items
-
-def createDatabase(database_connection):
-    
-    # Create a cursor object
-    cursor = database_connection.cursor()
-
-    # Create MARKETPLACE table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS marketplace (
-            id TEXT,
-            last_updated_date DATE,
-            PRIMARY KEY (id)
-        )
-    ''')
-    
-    # Create ITEM table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS item (
-            asin TEXT,
-            name TEXT, 
-            listing_url TEXT,
-            last_found_date DATE,
-            PRIMARY KEY (asin)
-        )
-    ''')
-
-    # Create STORE table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS inventory (
-            id TEXT,
-            marketplace_id TEXT,
-            item_asin TEXT,
-            PRIMARY KEY (id, marketplace_id, item_asin),
-            FOREIGN KEY (marketplace_id) REFERENCES marketplace(id),
-            FOREIGN KEY (item_asin) REFERENCES item(asin)
-        )
-    ''')
-    
-    # Commit the changes
-    database_connection.commit()
-
-    # Close the cursor and the connection
-    cursor.close()
-    database_connection.close()
 
 if __name__ == "__main__":
    main(sys.argv[1:])
