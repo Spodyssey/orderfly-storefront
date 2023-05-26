@@ -1,28 +1,35 @@
-import csv, datetime, getopt, logging, os, random, requests, sys
+import csv, datetime, getopt, logging, os, random, requests, sys, sqlite3
 from bs4 import BeautifulSoup
 from models.item import Item
 
 from models.marketplace import Marketplace
 
 logDirectory = 'resources\\app\\logs\\'
-storefrontsDataDirectory = 'resources\\app\\data\\storefronts\\'
+dataDirectory = 'resources\\app\\data\\'
+marketplaceDBDirectory = 'resources\\app\\data\\marketplace.db'
 
 # If the logs directory does not exist, create it
 if not os.path.exists(logDirectory):
    os.makedirs(logDirectory)
 
-if not os.path.exists(storefrontsDataDirectory):
-   os.makedirs(storefrontsDataDirectory)
+if not os.path.exists(dataDirectory):
+   os.makedirs(dataDirectory)
 
 ###
 #
 ###
 def main(argv):
+
+    database_connection = sqlite3.connect(marketplaceDBDirectory)
+    
+    # Create database
+    createDatabase(database_connection)    
     
     # Set initial values
     logging_level = logging.INFO
     marketplaces = []
     pages = ''
+    items = list[Item]
 
     opts, args = getopt.getopt(argv,"hdm:p:",["debug=","marketplaceIDs=","pages="])
 
@@ -44,15 +51,48 @@ def main(argv):
     logging.basicConfig(filename=logDirectory + 'orderfly-storefront.log', encoding='utf-8', level=logging_level, format='[%(levelname)s] %(asctime)s: %(message)s')
 
     for marketplace in marketplaces:
+        print(marketplace.id)
         logging.info(f'Requested marketplace ID: { marketplace.id }')
+        marketplace.insert_into_db(marketplaceDBDirectory)
+        
         # logging.info(f'Requested page(s): { pages }')
-        scrapeMarketplace(marketplace, pages)
+        
+        
+        # For each item a marketplace has, add it to the corresponding tables
+        items = scrapeMarketplaceItems(marketplace, pages)
+        for item in items:
+            item.insert_into_db(marketplaceDBDirectory)
+        
+        # # Export results to CSV file
+        # # For some reason adding a \\ between storefrontsdirectory and marketplaceID adds an extra \\ to the string...
+        # storefrontPath = dataDirectory + marketplace.id + '\\'
+        # if not os.path.exists(storefrontPath):
+        #     os.makedirs(storefrontPath)
+
+        # csvFileName = datetime.datetime.now().strftime('%Y-%d-%m-%H%M%S') + '.csv'
+        # csvFilePath = storefrontPath + csvFileName
+
+        # try:
+        #     with open(csvFilePath, 'w', newline='') as csvFile:
+        #         fieldnames = [ 'item_name', 'asin', 'listing_url' ]
+        #         writer = csv.DictWriter(csvFile, fieldnames=fieldnames)
+        #         writer.writeheader()
+
+        #         for item in items:
+        #             writer.writerow({
+        #                 'item_name': item.name, 
+        #                 'asin': item.asin, 
+        #                 'listing_url': item.listing_url
+        #             })
+                    
+        # except:
+        #     logging.fatal(f'Failed to write items!')
 
 ###
 #
 ###
-def scrapeMarketplace(marketplace, pages):
-
+def scrapeMarketplaceItems(marketplace, pages):
+    
     # Only first 10 of each is tested (Chrome ^52.0.2762.73 | FireFox ^72.0)
     USER_AGENTS = [
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.5112.79 Safari/537.36",    # Chrome 104.0.5112.79
@@ -120,7 +160,7 @@ def scrapeMarketplace(marketplace, pages):
 
     # For each page
     currentPage = 1
-    items = []
+    items: list[Item] = []
 
     while currentPage < marketplace.number_of_pages + 1:
         HEADERS = {
@@ -145,31 +185,48 @@ def scrapeMarketplace(marketplace, pages):
             items.append(Item(item_name, asin, listing_url))
         
         currentPage += 1
+        
+    return items
 
-    # Export results to CSV file
-    # For some reason adding a \\ between storefrontsdirectory and marketplaceID adds an extra \\ to the string...
-    storefrontPath = storefrontsDataDirectory + marketplace.id + '\\'
-    if not os.path.exists(storefrontPath):
-        os.makedirs(storefrontPath)
+def createDatabase(database_connection):
+    
+    # Create a cursor object
+    cursor = database_connection.cursor()
 
-    csvFileName = datetime.datetime.now().strftime('%Y-%d-%m-%H%M%S') + '.csv'
-    csvFilePath = storefrontPath + csvFileName
+    # Create MARKETPLACE table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS marketplace (
+            id TEXT,
+            PRIMARY KEY (id)
+        )
+    ''')
+    
+    # Create ITEM table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS item (
+            asin TEXT NOT NULL,
+            name TEXT, 
+            listing_url TEXT,
+            PRIMARY KEY (asin)
+        )
+    ''')
 
-    try:
-        with open(csvFilePath, 'w', newline='') as csvFile:
-            fieldnames = [ 'item_name', 'asin', 'listing_url' ]
-            writer = csv.DictWriter(csvFile, fieldnames=fieldnames)
-            writer.writeheader()
+    # Create STORE table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS inventory (
+            marketplace_id TEXT,
+            item_asin TEXT,
+            FOREIGN KEY (marketplace_id) REFERENCES marketplace(id),
+            FOREIGN KEY (item_asin) REFERENCES item(asin)
+        )
+    ''')
+    
+    # Commit the changes
+    database_connection.commit()
 
-            for item in items:
-                writer.writerow({
-                    'item_name': item.name, 
-                    'asin': item.asin, 
-                    'listing_url': item.listing_url
-                })
-                
-    except:
-        logging.fatal(f'Failed to write items!')
+    # Close the cursor and the connection
+    cursor.close()
+    database_connection.close()
 
 if __name__ == "__main__":
    main(sys.argv[1:])
