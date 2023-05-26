@@ -24,7 +24,7 @@ class ItemDAO:
         insert_query = '''
             INSERT INTO item (asin, last_updated_date, listing_url, name)
             VALUES (?, ?, ?, ?)
-        '''
+        '''        
         self.cursor.execute(insert_query, (item.asin, item.last_updated_date, item.listing_url, item.name))
         self.conn.commit()
 
@@ -62,4 +62,4 @@ class Item:
         self.asin = asin
         self.last_updated_date = last_updated_date
         self.listing_url = listing_url
-        self.name = name,
+        self.name = name

@@ -34,7 +34,7 @@ def main(argv):
             # Read each marketplace ID value (split by ,) from the command line
             requestedMarketplaceIDs = arg.split(',')
             for marketplaceID in requestedMarketplaceIDs:
-                requested_marketplaces.append(Marketplace(marketplaceID, datetime.datetime.now(datetime.timezone.utc)))
+                requested_marketplaces.append(Marketplace(marketplaceID, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")))
 
     # Set logging level
     logging.basicConfig(filename=logDirectory + 'orderfly-storefront.log', encoding='utf-8', level=logging_level, format='[%(levelname)s] %(asctime)s: %(message)s')
@@ -65,7 +65,6 @@ def main(argv):
         # For each item a marketplace has, add it to the corresponding tables
         items = scrapeMarketplaceItems(marketplace)
         for item in items:
-            
             # Try to create a new record in the database
             try:
                 itemDAO.create(item)
@@ -176,8 +175,7 @@ def scrapeMarketplaceItems(marketplace):
             listing_url = 'https://amazon.com' + href.split('`/')[0].split('">')[0]
             item_name = href.split('`/')[0].replace('/', '').split('dp')[0].replace('-', ' ')
             asin = href.split('/dp/')[1].split('/')[0]
-            last_updated_date = datetime.datetime.now(datetime.timezone.utc)
-            
+            last_updated_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")         
             items.append(Item(asin, last_updated_date, listing_url, item_name))
         
         currentPage += 1
