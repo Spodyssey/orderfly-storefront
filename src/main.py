@@ -70,15 +70,17 @@ def main(argv):
                 itemDAO.create(item)
             except:
                 logging.warning(f'Failed to create a new record in the ITEM table! One may already exist!')
-                
+
             # Check for an existing marketplace record in the database
             try:
                 item = itemDAO.read(item.asin)
             except:
                 logging.warning(f'Failed to retrieve a record from the ITEM table!')
                 logging.debug(f'Item ASIN: { item.asin }')
-        
+
         # Insert Marketplace Inventory
+        inventory = Inventory(datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H"), items, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), marketplace.id)
+        inventoryDAO.create(inventory)
 
     # Close database connetions
     marketplaceDAO.close()
