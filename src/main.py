@@ -20,14 +20,13 @@ def main(argv):
     # Set initial values
     logging_level = logging.INFO
     requested_marketplaces = []
-    pages = ''
     items = list[Item]
 
     # Parse Arugments
-    opts, args = getopt.getopt(argv,"hdm:p:",["debug=","marketplaceIDs=","pages="])
+    opts, args = getopt.getopt(argv,"hdm:",["debug=","marketplaceIDs="])
     for opt, arg in opts:
         if opt == '-h':
-            print ('main.py --debug -m <marketplaceID>, -p <pages>')
+            print ('main.py --debug -m <marketplaceID>')
             sys.exit()
         elif opt in ("-d", "--debug"): # Set debug mode for logging
             logging_level = logging.DEBUG
@@ -36,9 +35,6 @@ def main(argv):
             requestedMarketplaceIDs = arg.split(',')
             for marketplaceID in requestedMarketplaceIDs:
                 requested_marketplaces.append(Marketplace(marketplaceID, datetime.datetime.now(datetime.timezone.utc)))
-        elif opt in ("-p", "--pages"):
-            # TODO 
-            pages = arg
 
     # Set logging level
     logging.basicConfig(filename=logDirectory + 'orderfly-storefront.log', encoding='utf-8', level=logging_level, format='[%(levelname)s] %(asctime)s: %(message)s')
@@ -67,7 +63,7 @@ def main(argv):
             logging.debug(f'Marketplace ID: { requested_marketplace.id }')
 
         # For each item a marketplace has, add it to the corresponding tables
-        items = scrapeMarketplaceItems(marketplace, pages)
+        items = scrapeMarketplaceItems(marketplace)
         for item in items:
             
             # Try to create a new record in the database
@@ -90,7 +86,7 @@ def main(argv):
     itemDAO.close()
     inventoryDAO.close()
 
-def scrapeMarketplaceItems(marketplace, pages):
+def scrapeMarketplaceItems(marketplace):
     
     # Only first 10 of each is tested (Chrome ^52.0.2762.73 | FireFox ^72.0)
     USER_AGENTS = [
