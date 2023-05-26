@@ -1,5 +1,6 @@
 import csv, datetime, getopt, logging, os, random, requests, sys, sqlite3
 from bs4 import BeautifulSoup
+from models.inventory import Inventory
 from models.item import Item
 
 from models.marketplace import Marketplace
@@ -51,18 +52,19 @@ def main(argv):
     logging.basicConfig(filename=logDirectory + 'orderfly-storefront.log', encoding='utf-8', level=logging_level, format='[%(levelname)s] %(asctime)s: %(message)s')
 
     for marketplace in marketplaces:
-        print(marketplace.id)
         logging.info(f'Requested marketplace ID: { marketplace.id }')
         marketplace.insert_into_db(marketplaceDBDirectory)
-        
-        # logging.info(f'Requested page(s): { pages }')
-        
-        
+
         # For each item a marketplace has, add it to the corresponding tables
         items = scrapeMarketplaceItems(marketplace, pages)
         for item in items:
             item.insert_into_db(marketplaceDBDirectory)
         
+        # Insert marketplace Inventory into the database
+        Inventory(datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H"), marketplace.id, items).insert_into_db(marketplaceDBDirectory)
+        
+        # for item in new_inventory.items:
+        #     Inventory.insert_into_db(marketplaceDBDirectory, item)
         # # Export results to CSV file
         # # For some reason adding a \\ between storefrontsdirectory and marketplaceID adds an extra \\ to the string...
         # storefrontPath = dataDirectory + marketplace.id + '\\'
@@ -197,6 +199,7 @@ def createDatabase(database_connection):
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS marketplace (
             id TEXT,
+            last_updated_date DATE,
             PRIMARY KEY (id)
         )
     ''')
@@ -204,9 +207,10 @@ def createDatabase(database_connection):
     # Create ITEM table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS item (
-            asin TEXT NOT NULL,
+            asin TEXT,
             name TEXT, 
             listing_url TEXT,
+            last_found_date DATE,
             PRIMARY KEY (asin)
         )
     ''')
@@ -214,8 +218,10 @@ def createDatabase(database_connection):
     # Create STORE table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS inventory (
+            id TEXT,
             marketplace_id TEXT,
             item_asin TEXT,
+            PRIMARY KEY (id, marketplace_id, item_asin),
             FOREIGN KEY (marketplace_id) REFERENCES marketplace(id),
             FOREIGN KEY (item_asin) REFERENCES item(asin)
         )

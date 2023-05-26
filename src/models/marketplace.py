@@ -1,3 +1,4 @@
+import datetime
 import logging
 import sqlite3
 from bs4 import BeautifulSoup
@@ -64,13 +65,14 @@ class Marketplace:
         self.number_of_pages = totalPages
         
     def insert_into_db(self, dataDirectory):
-        database_connection = sqlite3.connect(dataDirectory)
-        
-        cursor = database_connection.cursor()
-        
-        insert_statement = "INSERT OR REPLACE INTO marketplace (id) VALUES (?)"
-        
-        # Insert into table
-        cursor.execute(insert_statement, (self.id,))
-        
-        database_connection.commit()
+        try:
+            database_connection = sqlite3.connect(dataDirectory)
+            cursor = database_connection.cursor()
+            insert_statement = "INSERT OR REPLACE INTO marketplace (id, last_updated_date) VALUES (?, ?)"
+    
+            # Insert into table
+            cursor.execute(insert_statement, (self.id, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")))
+            database_connection.commit()
+        except:
+            logging.debug(self)
+            logging.fatal(f'Failed to insert or replace Marketplace record!')
