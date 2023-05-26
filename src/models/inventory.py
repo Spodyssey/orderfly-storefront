@@ -11,16 +11,28 @@ class InventoryDAO:
         create_table_query = '''
             CREATE TABLE IF NOT EXISTS inventory (
                 id TEXT,
+                last_updated_date DATE,
                 marketplace_id TEXT,
-                item_asin TEXT,
-                PRIMARY KEY (id, marketplace_id, item_asin),
-                FOREIGN KEY (marketplace_id) REFERENCES marketplace(id),
-                FOREIGN KEY (item_asin) REFERENCES item(asin)
+                PRIMARY KEY (id, marketplace_id)
             )
         '''
         self.cursor.execute(create_table_query)
         self.conn.commit()
-        
+
+    def update(self, inventory):
+        update_query = '''
+            UPDATE inventory SET last_updated_date = ? WHERE id = ? AND marketplace_id = ?
+        '''
+        self.cursor.execute(update_query, (inventory.last_updated_date, inventory.id, inventory.marketplace_id))
+        self.conn.commit()
+
+    def delete(self, inventory):
+        delete_query = '''
+            DELETE FROM inventory WHERE id = ? AND marketplace_id = ?
+        '''
+        self.cursor.execute(delete_query, (inventory.id, inventory.marketplace_id))
+        self.conn.commit()
+    
     def close(self):
         self.conn.close()
 
