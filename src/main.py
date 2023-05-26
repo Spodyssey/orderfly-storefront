@@ -62,33 +62,6 @@ def main(argv):
         
         # Insert marketplace Inventory into the database
         Inventory(datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H"), marketplace.id, items).insert_into_db(marketplaceDBDirectory)
-        
-        # for item in new_inventory.items:
-        #     Inventory.insert_into_db(marketplaceDBDirectory, item)
-        # # Export results to CSV file
-        # # For some reason adding a \\ between storefrontsdirectory and marketplaceID adds an extra \\ to the string...
-        # storefrontPath = dataDirectory + marketplace.id + '\\'
-        # if not os.path.exists(storefrontPath):
-        #     os.makedirs(storefrontPath)
-
-        # csvFileName = datetime.datetime.now().strftime('%Y-%d-%m-%H%M%S') + '.csv'
-        # csvFilePath = storefrontPath + csvFileName
-
-        # try:
-        #     with open(csvFilePath, 'w', newline='') as csvFile:
-        #         fieldnames = [ 'item_name', 'asin', 'listing_url' ]
-        #         writer = csv.DictWriter(csvFile, fieldnames=fieldnames)
-        #         writer.writeheader()
-
-        #         for item in items:
-        #             writer.writerow({
-        #                 'item_name': item.name, 
-        #                 'asin': item.asin, 
-        #                 'listing_url': item.listing_url
-        #             })
-                    
-        # except:
-        #     logging.fatal(f'Failed to write items!')
 
 ###
 #
