@@ -1,4 +1,4 @@
-import datetime, getopt, logging, os, random, requests, sys
+import datetime, getopt, json, logging, os, random, requests, sys
 from bs4 import BeautifulSoup
 from models.inventory import Inventory, InventoryDAO
 from models.item import Item, ItemDAO
@@ -33,7 +33,7 @@ def main(argv):
             logging_level = logging.DEBUG
         elif opt in ("-m", "--marketplaceIDs"):
             # Read each marketplace ID value (split by ,) from the command line
-            requestedMarketplaceIDs = arg.split(',')
+            requestedMarketplaceIDs = arg.replace('\\', '').split(',')
             for marketplaceID in requestedMarketplaceIDs:
                 requested_marketplaces.append(Marketplace(marketplaceID, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")))
 
@@ -48,6 +48,7 @@ def main(argv):
 
     # For each marketplace
     marketplace = Marketplace
+    inventory = Inventory
     for requested_marketplace in requested_marketplaces:
 
         # Try to create a new record in the database
@@ -74,6 +75,7 @@ def main(argv):
             inventoryDAO.create(inventory)
         except:
             logging.warning(f'Failed to create a new record in the INVENTORY table! One may already exist!')
+            logging.debug(f'Marketplace ID: { requested_marketplace.id }')
 
         # Check for an existing marketplace record in the database
         try:
@@ -99,10 +101,15 @@ def main(argv):
 
         inventoryItemsDAO.create(inventory)
 
+    # Return
+    print(json.dumps(inventoryItemsDAO.read(inventory.uuid), default=lambda x: x.__dict__))
+    
     # Close database connetions
     marketplaceDAO.close()
     itemDAO.close()
     inventoryDAO.close()
+    inventoryItemsDAO.close()
+    
 
 def scrapeMarketplaceItems(marketplace):
     

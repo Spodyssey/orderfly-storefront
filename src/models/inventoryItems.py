@@ -1,4 +1,4 @@
-import sqlite3
+import json, sqlite3
 
 class InventoryItemsDAO:
     def __init__(self, db_file):
@@ -69,3 +69,6 @@ class InventoryItem:
     def __init__(self, inventory_uuid, item_asin):
         self.inventory_uuid = inventory_uuid
         self.item_asin = item_asin
+        
+    def __str__(self):
+        return json.dumps(self.__dict__)
