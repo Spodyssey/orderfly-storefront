@@ -22,7 +22,7 @@ class ItemDAO:
 
     def create(self, item):
         insert_query = '''
-            INSERT INTO item (asin, last_updated_date, listing_url, name)
+            INSERT OR REPLACE INTO item (asin, last_updated_date, listing_url, name)
             VALUES (?, ?, ?, ?)
         '''        
         self.cursor.execute(insert_query, (item.asin, item.last_updated_date, item.listing_url, item.name))

@@ -21,11 +21,12 @@ class MarketplaceDAO:
 
     def create(self, marketplace):
         insert_query = '''
-            INSERT INTO marketplace (id, last_updated_date)
+            INSERT OR REPLACE INTO marketplace (id, last_updated_date)
             VALUES (?, ?)
         '''
         self.cursor.execute(insert_query, (marketplace.id, marketplace.last_updated_date))
         self.conn.commit()
+        logging.info(f'Created new marketplace record for marketplace ID: { marketplace.id }')
 
     def read(self, marketplace_id):
         select_query = '''

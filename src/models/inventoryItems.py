@@ -22,7 +22,7 @@ class InventoryItemsDAO:
     # TODO - HANDLE CONFLICTS
     def create(self, inventory):
         insert_query = '''
-            INSERT INTO inventory_items (inventory_uuid, item_asin)
+            INSERT OR REPLACE INTO inventory_items (inventory_uuid, item_asin)
             VALUES (?, ?)
         '''
         for item in inventory.items:

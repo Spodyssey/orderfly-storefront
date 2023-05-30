@@ -1,4 +1,3 @@
-import datetime
 import sqlite3, uuid
 
 class InventoryDAO:
@@ -21,10 +20,10 @@ class InventoryDAO:
         self.cursor.execute(create_table_query)
         self.conn.commit()
 
-    ## TODO - HANDLE CONFLICTS
+    # TODO - HANDLE CONFLICTS
     def create(self, inventory):
         insert_query = '''
-            INSERT INTO inventory (id, last_updated_date, marketplace_id, uuid)
+            INSERT OR REPLACE INTO inventory (id, last_updated_date, marketplace_id, uuid)
             VALUES (?, ?, ?, ?)
         '''        
         self.cursor.execute(insert_query, (inventory.id, inventory.last_updated_date, inventory.marketplace_id, inventory.uuid))

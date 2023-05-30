@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from models.inventory import Inventory, InventoryDAO
 from models.item import Item, ItemDAO
 from models.marketplace import Marketplace, MarketplaceDAO
+from models.inventoryItems import InventoryItemsDAO
 
 logDirectory = 'resources\\app\\logs\\'
 dataDirectory = 'resources\\app\\data\\'
@@ -43,6 +44,7 @@ def main(argv):
     marketplaceDAO = MarketplaceDAO(marketplaceDBDirectory)
     itemDAO = ItemDAO(marketplaceDBDirectory)
     inventoryDAO = InventoryDAO(marketplaceDBDirectory)
+    inventoryItemsDAO = InventoryItemsDAO(marketplaceDBDirectory)
 
     # For each marketplace
     marketplace = Marketplace
@@ -62,8 +64,25 @@ def main(argv):
             logging.warning(f'Failed to retrieve a record from the MARKETPLACE table!')
             logging.debug(f'Marketplace ID: { requested_marketplace.id }')
 
-        # For each item a marketplace has, add it to the corresponding tables
+        # Find the items from the marketplace page
         items = scrapeMarketplaceItems(marketplace)
+
+        # Insert Marketplace Inventory
+        inventory = Inventory(datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H"), items, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), marketplace.id)
+        try:
+            # Try to create a new record in the database
+            inventoryDAO.create(inventory)
+        except:
+            logging.warning(f'Failed to create a new record in the INVENTORY table! One may already exist!')
+
+        # Check for an existing marketplace record in the database
+        try:
+            inventory = inventoryDAO.read(requested_marketplace.id)
+        except:
+            logging.warning(f'Failed to retrieve a record from the MARKETPLACE table!')
+            logging.debug(f'Marketplace ID: { requested_marketplace.id }')
+
+        # For each item a marketplace has, add it to the corresponding tables
         for item in items:
             # Try to create a new record in the database
             try:
@@ -78,9 +97,7 @@ def main(argv):
                 logging.warning(f'Failed to retrieve a record from the ITEM table!')
                 logging.debug(f'Item ASIN: { item.asin }')
 
-        # Insert Marketplace Inventory
-        inventory = Inventory(datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H"), items, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), marketplace.id)
-        inventoryDAO.create(inventory)
+        inventoryItemsDAO.create(inventory)
 
     # Close database connetions
     marketplaceDAO.close()
