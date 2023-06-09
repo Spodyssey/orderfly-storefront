@@ -69,7 +69,7 @@ def main(argv):
         items = scrapeMarketplaceItems(marketplace)
 
         # Insert Marketplace Inventory
-        inventory = Inventory(datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H"), items, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), marketplace.id)
+        inventory = Inventory(datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d"), items, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), marketplace.id)
         try:
             # Try to create a new record in the database
             inventoryDAO.create(inventory)
