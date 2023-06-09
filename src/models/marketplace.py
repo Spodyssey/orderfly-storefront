@@ -11,20 +11,25 @@ class MarketplaceDAO:
     def _create_table_if_not_exists(self):
         create_table_query = '''
             CREATE TABLE IF NOT EXISTS marketplace (
-                id TEXT,
-                last_updated_date DATE,
-                PRIMARY KEY (id)
+                id TEXT PRIMARY KEY,
+                uuid TEXT,
+                last_updated_date DATE            
             )
         '''
         self.cursor.execute(create_table_query)
         self.conn.commit()
 
+    # Method to insert a record into the marketplace table. When there is a conflict, only update
+    # the last_updated_date value of the record when it is newer than the last update.
     def create(self, marketplace):
         insert_query = '''
-            INSERT OR REPLACE INTO marketplace (id, last_updated_date)
-            VALUES (?, ?)
+            INSERT INTO marketplace (id, uuid, last_updated_date)
+            VALUES (?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                last_updated_date = excluded.last_updated_date
+            WHERE excluded.last_updated_date > marketplace.last_updated_date;
         '''
-        self.cursor.execute(insert_query, (marketplace.id, marketplace.last_updated_date))
+        self.cursor.execute(insert_query, (marketplace.id, marketplace.uuid, marketplace.last_updated_date))
         self.conn.commit()
         logging.info(f'Created new marketplace record for marketplace ID: { marketplace.id }')
 
@@ -35,8 +40,8 @@ class MarketplaceDAO:
         self.cursor.execute(select_query, (marketplace_id,))
         row = self.cursor.fetchone()
         if row:
-            marketplace_id, last_updated_date = row
-            return Marketplace(marketplace_id, last_updated_date)
+            marketplace_id, uuid, last_updated_date = row
+            return Marketplace(marketplace_id, uuid, last_updated_date)
         else:
             return None
 
@@ -58,9 +63,10 @@ class MarketplaceDAO:
         self.conn.close()
 
 class Marketplace:
-    def __init__(self, id, last_updated_date):
+    def __init__(self, id, uuid, last_updated_date):
         self.id = id
         self.last_updated_date = last_updated_date
+        self.uuid = uuid
         self.number_of_pages = 0
     
     ###################################################################################################
