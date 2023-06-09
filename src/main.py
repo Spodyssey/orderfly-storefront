@@ -71,40 +71,43 @@ def main(argv):
         items = scrapeMarketplaceItems(marketplace)
 
         # Insert Marketplace Inventory
-        inventory = Inventory(datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d"), items, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), marketplace.id)
-        # try:
-        #     # Try to create a new record in the database
-        #     inventoryDAO.create(inventory)
-        # except:
-        #     logging.warning(f'Failed to create a new record in the INVENTORY table! One may already exist!')
-        #     logging.debug(f'Marketplace ID: { requested_marketplace.id }')
+        inventory = Inventory(datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d"), items, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), marketplace.uuid)
+        try:
+            # Try to create a new record in the database
+            inventoryDAO.create(inventory)
+            logging.info(f'Created a new inventory record!')
+        except:
+            logging.warning(f'Failed to create a new record in the INVENTORY table! One may already exist!')
+            logging.debug(f'Marketplace ID: { requested_marketplace.id }')
+            inventoryDAO.update(inventory)
+            logging.info(f'Updated inventory record! [Marketplace ID: { requested_marketplace.id } | Inventory ID: { inventory.id }]')
 
-        # # Check for an existing marketplace record in the database
-        # try:
-        #     inventory = inventoryDAO.read(requested_marketplace.id)
-        # except:
-        #     logging.warning(f'Failed to retrieve a record from the MARKETPLACE table!')
-        #     logging.debug(f'Marketplace ID: { requested_marketplace.id }')
+        # Check for an existing marketplace record in the database
+        try:
+            inventory = inventoryDAO.read(requested_marketplace.id)
+        except:
+            logging.warning(f'Failed to retrieve a record from the MARKETPLACE table!')
+            logging.debug(f'Marketplace ID: { requested_marketplace.id }')
 
-        # # For each item a marketplace has, add it to the corresponding tables
-        # for item in items:
-        #     # Try to create a new record in the database
-        #     try:
-        #         itemDAO.create(item)
-        #     except:
-        #         logging.warning(f'Failed to create a new record in the ITEM table! One may already exist!')
+        # For each item a marketplace has, add it to the corresponding tables
+        for item in items:
+            # Try to create a new record in the database
+            try:
+                itemDAO.create(item)
+            except:
+                logging.warning(f'Failed to create a new record in the ITEM table! One may already exist!')
 
-        #     # Check for an existing marketplace record in the database
-        #     try:
-        #         item = itemDAO.read(item.asin)
-        #     except:
-        #         logging.warning(f'Failed to retrieve a record from the ITEM table!')
-        #         logging.debug(f'Item ASIN: { item.asin }')
+            # Check for an existing marketplace record in the database
+            try:
+                item = itemDAO.read(item.asin)
+            except:
+                logging.warning(f'Failed to retrieve a record from the ITEM table!')
+                logging.debug(f'Item ASIN: { item.asin }')
 
-        # inventoryItemsDAO.create(inventory)
+        inventoryItemsDAO.create(inventory)
 
     # Return
-    # print(json.dumps(inventoryItemsDAO.read(inventory.uuid), default=lambda x: x.__dict__))
+    print(json.dumps(inventoryItemsDAO.read(inventory.uuid), default=lambda x: x.__dict__))
     
     # Close database connetions
     marketplaceDAO.close()
