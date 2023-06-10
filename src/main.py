@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 from models.inventory import Inventory, InventoryDAO
 from models.item import Item, ItemDAO
 from models.marketplace import Marketplace, MarketplaceDAO
-from models.inventoryItems import InventoryItemsDAO
+from models.inventoryItem import InventoryItemDAO
 
 logDirectory = 'resources\\app\\logs\\'
 dataDirectory = 'resources\\app\\data\\'
@@ -17,7 +17,7 @@ if not os.path.exists(dataDirectory):
    os.makedirs(dataDirectory)
 
 def main(argv):
-        
+
     # Set initial values
     logging_level = logging.INFO
     requested_marketplaces = []
@@ -44,7 +44,7 @@ def main(argv):
     marketplaceDAO = MarketplaceDAO(marketplaceDBDirectory)
     itemDAO = ItemDAO(marketplaceDBDirectory)
     inventoryDAO = InventoryDAO(marketplaceDBDirectory)
-    inventoryItemsDAO = InventoryItemsDAO(marketplaceDBDirectory)
+    inventoryItemDAO = InventoryItemDAO(marketplaceDBDirectory)
 
     # For each marketplace
     marketplace = Marketplace
@@ -104,16 +104,16 @@ def main(argv):
                 logging.warning(f'Failed to retrieve a record from the ITEM table!')
                 logging.debug(f'Item ASIN: { item.asin }')
 
-        inventoryItemsDAO.create(inventory)
+        inventoryItemDAO.create(inventory)
 
     # Return
-    print(json.dumps(inventoryItemsDAO.read(inventory.uuid), default=lambda x: x.__dict__))
+    print(json.dumps(inventoryItemDAO.read(inventory.uuid), default=lambda x: x.__dict__))
     
     # Close database connetions
     marketplaceDAO.close()
     itemDAO.close()
     inventoryDAO.close()
-    inventoryItemsDAO.close()
+    inventoryItemDAO.close()
     
 
 def scrapeMarketplaceItems(marketplace):
@@ -206,8 +206,8 @@ def scrapeMarketplaceItems(marketplace):
             listing_url = 'https://amazon.com' + href.split('`/')[0].split('">')[0]
             item_name = href.split('`/')[0].replace('/', '').split('dp')[0].replace('-', ' ')
             asin = href.split('/dp/')[1].split('/')[0]
-            last_updated_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")         
-            items.append(Item(asin, last_updated_date, listing_url, item_name))
+            last_seen_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")         
+            items.append(Item(asin, last_seen_date, listing_url, item_name))
         
         currentPage += 1
         
