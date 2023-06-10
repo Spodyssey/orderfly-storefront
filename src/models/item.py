@@ -1,4 +1,4 @@
-import sqlite3
+import datetime, sqlite3
 
 class ItemDAO:
     def __init__(self, db_file):
@@ -11,7 +11,8 @@ class ItemDAO:
         create_table_query = '''
             CREATE TABLE IF NOT EXISTS item (
                 asin TEXT,
-                last_updated_date DATE,
+                first_seen_date DATE,
+                last_seen_date DATE,
                 listing_url TEXT,
                 name TEXT,
                 PRIMARY KEY (asin)
@@ -22,10 +23,12 @@ class ItemDAO:
 
     def create(self, item):
         insert_query = '''
-            INSERT OR REPLACE INTO item (asin, last_updated_date, listing_url, name)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO item (asin, first_seen_date, last_seen_date, listing_url, name)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(asin) DO UPDATE SET
+                last_seen_date = excluded.last_seen_date
         '''        
-        self.cursor.execute(insert_query, (item.asin, item.last_updated_date, item.listing_url, item.name))
+        self.cursor.execute(insert_query, (item.asin, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), item.last_seen_date, item.listing_url, item.name))
         self.conn.commit()
 
     def read(self, item_asin):
@@ -35,16 +38,16 @@ class ItemDAO:
         self.cursor.execute(select_query, (item_asin,))
         row = self.cursor.fetchone()
         if row:
-            asin, last_updated_date, listing_url, name = row
-            return Item(asin, last_updated_date, listing_url, name)
+            asin, last_seen_date, listing_url, name = row
+            return Item(asin, last_seen_date, listing_url, name)
         else:
             return None
 
     def update(self, item):
         update_query = '''
-            UPDATE item SET last_updated_date = ?, listing_url = ?, name = ?, WHERE asin = ?
+            UPDATE item SET last_seen_date = ?, listing_url = ?, name = ?, WHERE asin = ?
         '''
-        self.cursor.execute(update_query, (item.last_updated_date, item.listing_url, item.name, item.asin))
+        self.cursor.execute(update_query, (item.last_seen_date, item.listing_url, item.name, item.asin))
         self.conn.commit()
 
     def delete(self, item_asin):
@@ -58,8 +61,8 @@ class ItemDAO:
         self.conn.close()
 
 class Item:
-    def __init__(self, asin, last_updated_date, listing_url, name):
+    def __init__(self, asin, last_seen_date, listing_url, name):
         self.asin = asin
-        self.last_updated_date = last_updated_date
+        self.last_seen_date = last_seen_date
         self.listing_url = listing_url
         self.name = name
