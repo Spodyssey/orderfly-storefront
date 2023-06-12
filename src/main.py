@@ -4,6 +4,7 @@ from models.inventory import Inventory, InventoryDAO
 from models.item import Item, ItemDAO
 from models.marketplace import Marketplace, MarketplaceDAO
 from models.inventoryItem import InventoryItemDAO
+from models.marketplaceItem import MarketplaceItemDAO
 
 logDirectory = 'resources\\app\\logs\\'
 dataDirectory = 'resources\\app\\data\\'
@@ -45,6 +46,7 @@ def main(argv):
     itemDAO = ItemDAO(marketplaceDBDirectory)
     inventoryDAO = InventoryDAO(marketplaceDBDirectory)
     inventoryItemDAO = InventoryItemDAO(marketplaceDBDirectory)
+    marketplaceItemDAO = MarketplaceItemDAO(marketplaceDBDirectory)
 
     # For each marketplace
     marketplace = Marketplace
@@ -91,18 +93,25 @@ def main(argv):
 
         # For each item a marketplace has, add it to the corresponding tables
         for item in items:
-            # Try to create a new record in the database
+            # Try to create a new record in the Item table
             try:
                 itemDAO.create(item)
             except:
                 logging.warning(f'Failed to create a new record in the ITEM table! One may already exist!')
 
-            # Check for an existing marketplace record in the database
+            # Read entry from database
             try:
                 item = itemDAO.read(item.asin)
+                print(item)
             except:
                 logging.warning(f'Failed to retrieve a record from the ITEM table!')
                 logging.debug(f'Item ASIN: { item.asin }')
+
+        # Add to MARKETPLACE_ITEM table
+        try:
+            marketplaceItemDAO.create(marketplace, items)
+        except:
+            logging.warning(f'Failed to create a new record in the MARKETPLACE_ITEM table! One may already exist!')
 
         inventoryItemDAO.create(inventory)
 

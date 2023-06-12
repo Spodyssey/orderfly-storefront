@@ -1,3 +1,4 @@
+import datetime
 import json, sqlite3
 
 class MarketplaceItemDAO:
@@ -12,22 +13,27 @@ class MarketplaceItemDAO:
             CREATE TABLE IF NOT EXISTS marketplace_item (
                 marketplace_uuid TEXT,
                 item_asin TEXT,
+                first_seen DATE,
+                last_seen DATE,
                 FOREIGN KEY (marketplace_uuid) REFERENCES marketplace (uuid)
                 FOREIGN KEY (item_asin) REFERENCES item (asin)
-                PRIMARY KEY (marketplace_uuid,)
+                PRIMARY KEY (marketplace_uuid, item_asin)
             )
         '''
         self.cursor.execute(create_table_query)
         self.conn.commit()
 
     # TODO - HANDLE CONFLICTS
-    def create(self, inventory):
+    def create(self, marketplace, items):
         insert_query = '''
-            INSERT OR REPLACE INTO marketplace_item (marketplace_uuid, item_asin)
-            VALUES (?, ?)
+            INSERT INTO marketplace_item (marketplace_uuid, item_asin, first_seen, last_seen)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(marketplace_uuid, item_asin) DO UPDATE SET
+                last_seen = excluded.last_seen;
         '''
-        for item in inventory.items:
-            self.cursor.execute(insert_query, (inventory.uuid, item.asin))
+        current_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        for item in items:
+            self.cursor.execute(insert_query, (marketplace.uuid, item.asin, current_date, current_date))
         self.conn.commit()
 
     def read(self, marketplace_uuid):
