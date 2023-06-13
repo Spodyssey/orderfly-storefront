@@ -118,11 +118,11 @@ def main(argv):
             logging.exception(exception)
             logging.warning(f'Failed to clean records older than one week from MARKETPLACE_ITEM table for marketplace ID: { marketplace.id }!')
 
+        # TODO - Revisit?
         # inventoryItemDAO.create(inventory)
 
-    # Return
-    print(json.dumps(marketplaceItemDAO.read(marketplace.uuid), default=lambda x: x.__dict__))
-    print(json.dumps(marketplaceItemDAO.read(marketplace.uuid), default=lambda x: x.__dict__))
+        # Trigger return on API with a console print
+        print(json.dumps(marketplaceItemDAO.read(marketplace.uuid), default=lambda x: x.__dict__))
     
     # Close database connetions
     marketplaceDAO.close()

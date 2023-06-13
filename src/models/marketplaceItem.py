@@ -43,13 +43,13 @@ class MarketplaceItemDAO:
         self.cursor.execute(select_query, (marketplace_uuid,))
         rows = self.cursor.fetchall()
         
-        marketplace_item = []
+        marketplace_items = []
         # TODO
         if rows:
             for row in rows:
-                marketplace_uuid, item_asin = row
-                marketplace_item.append(MarketplaceItem(marketplace_uuid, item_asin))    
-            return marketplace_item
+                marketplace_uuid, item_asin, first_seen, last_seen = row
+                marketplace_items.append(MarketplaceItem(marketplace_uuid, item_asin, first_seen, last_seen))    
+            return marketplace_items
         else:
             return None
              
@@ -84,9 +84,11 @@ class MarketplaceItemDAO:
         self.conn.close()
 
 class MarketplaceItem:
-    def __init__(self, marketplace_uuid, item_asin):
+    def __init__(self, marketplace_uuid, item_asin, first_seen, last_seen):
         self.marketplace_uuid = marketplace_uuid
         self.item_asin = item_asin
+        self.first_seen = first_seen
+        self.last_seen = last_seen
         
     def __str__(self):
         return json.dumps(self.__dict__)
