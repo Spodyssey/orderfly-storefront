@@ -24,16 +24,18 @@ class InventoryDAO:
     def create(self, inventory):
         insert_query = '''
             INSERT INTO Inventory (id, last_updated_date, marketplace_uuid, uuid)
-            VALUES (?, ?, ?, ?);
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(id, marketplace_uuid) DO UPDATE SET
+                last_updated_date = excluded.last_updated_date;
         '''        
         self.cursor.execute(insert_query, (inventory.id, inventory.last_updated_date, inventory.marketplace_uuid, inventory.uuid))
         self.conn.commit()
 
-    def read(self, item_asin):
+    def read(self, marketplace_uuid):
         select_query = '''
-            SELECT * FROM inventory WHERE id = ? AND marketplace_uuid = ?
+            SELECT * FROM inventory WHERE marketplace_uuid = ?
         '''
-        self.cursor.execute(select_query, (item_asin,))
+        self.cursor.execute(select_query, (marketplace_uuid,))
         row = self.cursor.fetchone()
         if row:
             id, last_updated_date, marketplace_uuid, uuid = row

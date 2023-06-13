@@ -1,5 +1,5 @@
-import datetime
 import json, sqlite3
+from datetime import datetime, timedelta
 
 class MarketplaceItemDAO:
     def __init__(self, db_file):
@@ -31,7 +31,7 @@ class MarketplaceItemDAO:
             ON CONFLICT(marketplace_uuid, item_asin) DO UPDATE SET
                 last_seen = excluded.last_seen;
         '''
-        current_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        current_date = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         for item in items:
             self.cursor.execute(insert_query, (marketplace.uuid, item.asin, current_date, current_date))
         self.conn.commit()
@@ -52,7 +52,7 @@ class MarketplaceItemDAO:
             return marketplace_item
         else:
             return None
-            
+             
     # TODO? - I don't think this is needed
     # def update(self, inventory):
     #     update_query = '''
@@ -66,6 +66,18 @@ class MarketplaceItemDAO:
             DELETE FROM marketplace_item WHERE marketplace_uuid = ?
         '''
         self.cursor.execute(delete_query, (inventory.uuid,))
+        self.conn.commit()
+    
+    def clean_week_old(self, marketplace):
+        one_week_ago = datetime.now() - timedelta(weeks=1)
+        clean_query = '''
+            DELETE FROM marketplace_item
+            WHERE marketplace_uuid = ? AND last_seen < ?        
+        '''
+        print(marketplace.uuid)
+        print(one_week_ago)
+        
+        self.cursor.execute(clean_query, (marketplace.uuid, one_week_ago))
         self.conn.commit()
     
     def close(self):

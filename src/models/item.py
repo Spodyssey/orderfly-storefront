@@ -1,4 +1,6 @@
-import datetime, sqlite3
+import sqlite3
+import logging
+from datetime import datetime, timedelta
 
 class ItemDAO:
     def __init__(self, db_file):
@@ -21,14 +23,17 @@ class ItemDAO:
         self.cursor.execute(create_table_query)
         self.conn.commit()
 
-    def create(self, item):
+    def create(self, items):
         insert_query = '''
             INSERT INTO item (asin, first_seen_date, last_seen_date, listing_url, name)
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(asin) DO UPDATE SET
                 last_seen_date = excluded.last_seen_date
-        '''        
-        self.cursor.execute(insert_query, (item.asin, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), item.last_seen_date, item.listing_url, item.name))
+        '''
+        
+        current_date = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        for item in items:
+            self.cursor.execute(insert_query, (item.asin, current_date, current_date, item.listing_url, item.name))
         self.conn.commit()
 
     def read(self, item_asin):
@@ -38,7 +43,7 @@ class ItemDAO:
         self.cursor.execute(select_query, (item_asin,))
         row = self.cursor.fetchone()
         if row:
-            asin, last_seen_date, listing_url, name = row
+            asin, first_seen_date, last_seen_date, listing_url, name = row
             return Item(asin, last_seen_date, listing_url, name)
         else:
             return None
