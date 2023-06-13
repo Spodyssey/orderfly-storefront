@@ -52,7 +52,32 @@ class MarketplaceItemDAO:
             return marketplace_items
         else:
             return None
-             
+    
+    def read_with_item_info(self, marketplace_uuid):
+        select_query = '''            
+            SELECT
+                item.name,
+                item.asin,
+                item.listing_url,
+                marketplace_item.first_seen,
+                marketplace_item.last_seen
+            FROM marketplace_item
+            JOIN item ON marketplace_item.item_asin = item.asin
+            WHERE marketplace_item.marketplace_uuid = ?;
+        '''
+        self.cursor.execute(select_query, (marketplace_uuid,))
+        rows = self.cursor.fetchall()
+        
+        marketplace_items = []
+        # TODO
+        if rows:
+            for row in rows:
+                item_name, item_asin, listing_url, first_seen, last_seen = row
+                marketplace_items.append(MarketplaceItem(item_name, item_asin, listing_url, first_seen, last_seen))    
+            return marketplace_items
+        else:
+            return None
+    
     # TODO? - I don't think this is needed
     # def update(self, inventory):
     #     update_query = '''
@@ -84,9 +109,10 @@ class MarketplaceItemDAO:
         self.conn.close()
 
 class MarketplaceItem:
-    def __init__(self, marketplace_uuid, item_asin, first_seen, last_seen):
-        self.marketplace_uuid = marketplace_uuid
+    def __init__(self, item_name, item_asin, listing_url, first_seen, last_seen):
+        self.item_name = item_name
         self.item_asin = item_asin
+        self.listing_url = listing_url
         self.first_seen = first_seen
         self.last_seen = last_seen
         

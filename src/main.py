@@ -122,7 +122,7 @@ def main(argv):
         # inventoryItemDAO.create(inventory)
 
         # Trigger return on API with a console print
-        print(json.dumps(marketplaceItemDAO.read(marketplace.uuid), default=lambda x: x.__dict__))
+        print(json.dumps(marketplaceItemDAO.read_with_item_info(marketplace.uuid), default=lambda x: x.__dict__))
     
     # Close database connetions
     marketplaceDAO.close()
