@@ -79,7 +79,7 @@ def main(argv):
         try:
             # Try to create a new record in the database
             inventoryDAO.create(inventory)
-            logging.info(f'Created a new inventory record!')
+            logging.info(f'Created/Updated an Inventory record [{ inventory.id }] for Marketplace ID: { marketplace.id }')
         except Exception as exception:
             logging.exception(exception)
             logging.warning(f'Failed to create a new record in the INVENTORY table! One may already exist!')
