@@ -98,10 +98,7 @@ class MarketplaceItemDAO:
         clean_query = '''
             DELETE FROM marketplace_item
             WHERE marketplace_uuid = ? AND last_seen < ?        
-        '''
-        print(marketplace.uuid)
-        print(one_week_ago)
-        
+        '''        
         self.cursor.execute(clean_query, (marketplace.uuid, one_week_ago))
         self.conn.commit()
     
