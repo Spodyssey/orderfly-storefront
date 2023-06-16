@@ -57,7 +57,7 @@ def main(argv):
 
         # Print the found objects to console
         print(json.dumps(marketplaceDAO.read_active_items(marketplace), default=lambda x: x.__dict__))
-        # TODO - Remove marketplace items > 1 week old
+        # Remove marketplace items > 1 week old (inactive items)
         marketplaceItemDAO.clean_week_old(marketplace)
     
     # Close database connetions
