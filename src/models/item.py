@@ -14,8 +14,8 @@ class ItemDAO:
                 asin TEXT,
                 name TEXT,
                 listing_url TEXT,
-                first_seen_date DATE,
-                last_seen_date DATE,
+                first_seen DATE,
+                last_seen DATE,
                 PRIMARY KEY (asin)
             )
         '''
@@ -32,8 +32,8 @@ class ItemDAO:
         
         row = self.cursor.fetchone()
         if row:
-            asin, name, listing_url, first_seen_date, last_seen_date = row
-            return Item(asin, name, listing_url, first_seen_date, last_seen_date)
+            asin, name, listing_url, first_seen, last_seen = row
+            return Item(asin, name, listing_url, first_seen, last_seen)
         else:
             return None
 
@@ -41,7 +41,7 @@ class ItemDAO:
         logging.info(f'Inserting an ITEM record for ASIN: { item.asin }!')
         try:
             self.cursor.execute("INSERT INTO item VALUES (?, ?, ?, ?, ?)",
-                            (item.asin, item.name, item.listing_url, item.first_seen_date, item.last_seen_date))
+                (item.asin, item.name, item.listing_url, item.first_seen, item.last_seen))
         except Exception as exception:
             logging.warning(f'Failed to insert an ITEM record for ASIN: { item.asin }!')
             logging.exception(exception)
@@ -51,8 +51,8 @@ class ItemDAO:
     def update(self, item):
         logging.info(f'Updating an ITEM record for ASIN: { item.asin }!')
         try:
-            self.cursor.execute("UPDATE item SET name = ?, listing_url = ?, last_seen_date = ? WHERE asin = ?",
-                            (item.name, item.listing_url, item.last_seen_date, item.asin))
+            self.cursor.execute("UPDATE item SET name = ?, listing_url = ?, last_seen = ? WHERE asin = ?",
+                (item.name, item.listing_url, item.last_seen, item.asin))
         except Exception as exception:
             logging.warning(f'Failed to update ITEM record for ASIN: { item.asin }!')
             logging.exception(exception)
@@ -72,9 +72,9 @@ class ItemDAO:
         self.conn.close()
 
 class Item:
-    def __init__(self, asin, name, listing_url, first_seen_date, last_seen_date):
+    def __init__(self, asin, name, listing_url, first_seen, last_seen):
         self.asin = asin
         self.name = name
         self.listing_url = listing_url
-        self.first_seen_date = first_seen_date
-        self.last_seen_date = last_seen_date
+        self.first_seen = first_seen
+        self.last_seen = last_seen

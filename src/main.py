@@ -1,10 +1,8 @@
 import getopt, json, logging, os, random, requests, sys, uuid
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
-from models.inventory import Inventory, InventoryDAO
+from datetime import datetime
 from models.item import Item, ItemDAO
 from models.marketplace import Marketplace, MarketplaceDAO
-from models.inventoryItem import InventoryItemDAO
 from models.marketplaceItem import MarketplaceItemDAO
 
 logDirectory = 'resources\\app\\logs\\'
@@ -23,7 +21,6 @@ def main(argv):
 
     # Set initial values
     logging_level = logging.INFO
-    requested_marketplaces = []
     items = list[Item]
 
     # Parse Arugments
@@ -45,11 +42,7 @@ def main(argv):
     marketplaceDAO = MarketplaceDAO(marketplaceDBDirectory)
     itemDAO = ItemDAO(marketplaceDBDirectory)
     marketplaceItemDAO = MarketplaceItemDAO(marketplaceDBDirectory)
-    # inventoryDAO = InventoryDAO(marketplaceDBDirectory)
-    # inventoryItemDAO = InventoryItemDAO(marketplaceDBDirectory)
 
-    # marketplace = Marketplace
-    # inventory = Inventory
     # For each requested marketplace ID...
     for marketplace_id in requestedMarketplaceIDs:
         # Find / Create Marketplace object in the database
@@ -58,67 +51,18 @@ def main(argv):
         # Find the items from the marketplace page
         items = scrapeMarketplaceItems(marketplace)
 
-        # # Insert Marketplace Inventory
-        # inventory = Inventory(datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d"), items, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), marketplace.uuid)
-        # try:
-        #     # Try to create a new record in the database
-        #     inventoryDAO.create(inventory)
-        #     logging.info(f'Created/Updated an Inventory record [{ inventory.id }] for Marketplace ID: { marketplace.id }')
-        # except Exception as exception:
-        #     logging.exception(exception)
-        #     logging.warning(f'Failed to create a new record in the INVENTORY table! One may already exist!')
-        #     logging.debug(f'Marketplace ID: { requested_marketplace.id }')
-        #     inventoryDAO.update(inventory)
-        #     logging.info(f'Updated inventory record! [Marketplace ID: { requested_marketplace.id } | Inventory ID: { inventory.id }]')
-
-        # # Check for an existing marketplace record in the database
-        # try:
-        #     inventory = inventoryDAO.read(marketplace.uuid)
-        # except Exception as exception:
-        #     logging.warning(f'Failed to retrieve a record from the MARKETPLACE table!')
-        #     logging.debug(f'Marketplace ID: { requested_marketplace.id }')
-        #     logging.exception(exception)
-
-
-        # # Try to create new item records in the ITEM table
-        # try:
-        #     itemDAO.create(items)
-        # except Exception as exception:
-        #     logging.warning(f'Failed to create a new record in the ITEM table!')
-        #     logging.exception(exception)
-
         for item in items:
             itemDAO.read_and_update_or_insert(item)
-            # marketplaceItemDAO.read_and_update_or_insert(marketplace, item)
+            marketplaceItemDAO.read_and_update_or_insert(marketplace, item)
 
-        # # Add to MARKETPLACE_ITEM table
-        # try:
-        #     marketplaceItemDAO.create(marketplace, items)
-        # except Exception as exception:
-        #     logging.warning(f'Failed to create a new record in the MARKETPLACE_ITEM table!')
-        #     logging.exception(exception)
-
-        # # Clean week old records from MARKETPLACE_ITEM table
-        # try:
-        #     marketplaceItemDAO.clean_week_old(marketplace)
-        #     logging.info(f'Successfully cleaned records older than one week from MARKETPLACE_ITEM table for marketplace ID: { marketplace.id }!')
-        # except Exception as exception:
-        #     logging.exception(exception)
-        #     logging.warning(f'Failed to clean records older than one week from MARKETPLACE_ITEM table for marketplace ID: { marketplace.id }!')
-
-        # # TODO - Revisit?
-        # # inventoryItemDAO.create(inventory)
-
-        # # Trigger return on API with a console print
+        # TODO - Print return (Select on marketplace + marketplace_items)
         # print(json.dumps(marketplaceItemDAO.read_with_item_info(marketplace.uuid), default=lambda x: x.__dict__))
+        # TODO - Remove marketplace items > 1 week old
     
     # Close database connetions
     marketplaceDAO.close()
     itemDAO.close()
-    # inventoryDAO.close()
-    # marketplaceItemDAO.close()
-    # inventoryItemDAO.close()
-    
+    marketplaceItemDAO.close()
 
 def scrapeMarketplaceItems(marketplace):
     
