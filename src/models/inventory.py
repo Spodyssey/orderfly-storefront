@@ -27,7 +27,7 @@ class InventoryDAO:
             VALUES (?, ?, ?, ?)
             ON CONFLICT(id, marketplace_uuid) DO UPDATE SET
                 last_updated_date = excluded.last_updated_date;
-        '''        
+        '''
         self.cursor.execute(insert_query, (inventory.id, inventory.last_updated_date, inventory.marketplace_uuid, inventory.uuid))
         self.conn.commit()
 

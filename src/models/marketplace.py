@@ -11,53 +11,60 @@ class MarketplaceDAO:
     def _create_table_if_not_exists(self):
         create_table_query = '''
             CREATE TABLE IF NOT EXISTS marketplace (
-                id TEXT PRIMARY KEY,
+                id TEXT,
                 uuid TEXT,
-                last_updated_date DATE            
+                last_updated_date DATE,
+                PRIMARY KEY (id)
             )
         '''
         self.cursor.execute(create_table_query)
         self.conn.commit()
 
-    # Method to insert a record into the marketplace table. When there is a conflict, only update
-    # the last_updated_date value of the record when it is newer than the last update.
-    def create(self, marketplace):
-        insert_query = '''
-            INSERT INTO marketplace (id, uuid, last_updated_date)
-            VALUES (?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-                last_updated_date = excluded.last_updated_date
-            WHERE excluded.last_updated_date > marketplace.last_updated_date;
-        '''
-        self.cursor.execute(insert_query, (marketplace.id, marketplace.uuid, marketplace.last_updated_date))
-        self.conn.commit()
-        logging.info(f'Created new marketplace record for marketplace ID: { marketplace.id }')
-
-    def read(self, marketplace_id):
-        select_query = '''
-            SELECT * FROM marketplace WHERE id = ?
-        '''
-        self.cursor.execute(select_query, (marketplace_id,))
+    def read(self, marketplace):
+        logging.info(f'Searching for a MARKETPLACE record for ID: { marketplace.id }!')
+        try:
+            self.cursor.execute("SELECT * FROM marketplace WHERE id = ?", (marketplace.id,))
+        except Exception as exception:
+            logging.warning(f'Failed to find MARKETPLACE record for ID: { marketplace.id }!')
+            logging.exception(exception)
+        
         row = self.cursor.fetchone()
         if row:
-            marketplace_id, uuid, last_updated_date = row
-            return Marketplace(marketplace_id, uuid, last_updated_date)
+            id, uuid, last_updated_date = row
+            return Marketplace(id, uuid, last_updated_date)
         else:
             return None
 
-    def update(self, marketplace):
-        update_query = '''
-            UPDATE marketplace SET last_updated_date = ? WHERE id = ?
-        '''
-        self.cursor.execute(update_query, (marketplace.last_updated_date, marketplace.id))
+    def insert(self, marketplace):
+        logging.info(f'Inserting a MARKETPLACE record for ID: { marketplace.id }!')
+        try:
+            self.cursor.execute("INSERT INTO marketplace VALUES (?, ?, ?)",
+                            (marketplace.id, marketplace.uuid, marketplace.last_updated_date))
+        except Exception as exception:
+            logging.warning(f'Failed to insert MARKETPLACE record for ID: { marketplace.id }!')
+            logging.exception(exception)
+            
         self.conn.commit()
 
-    def delete(self, marketplace_id):
-        delete_query = '''
-            DELETE FROM marketplace WHERE id = ?
-        '''
-        self.cursor.execute(delete_query, (marketplace_id,))
+    def update(self, marketplace):
+        logging.info(f'Updating a marketplace record for ID: { marketplace.id }!')
+        try:
+            self.cursor.execute("UPDATE marketplace SET last_updated_date = ? WHERE id = ?",
+                            (marketplace.last_updated_date, marketplace.id))
+        except Exception as exception:
+            logging.warning(f'Failed to update MARKETPLACE record for ID: { marketplace.id }!')
+            logging.exception(exception)
+            
         self.conn.commit()
+
+    def read_and_update_or_insert(self, marketplace):
+        existing_record = self.read(marketplace)
+        if existing_record:
+            self.update(marketplace)
+            return self.read(marketplace)
+        else:
+            self.insert(marketplace)
+            return self.read(marketplace)
 
     def close(self):
         self.conn.close()
@@ -65,8 +72,8 @@ class MarketplaceDAO:
 class Marketplace:
     def __init__(self, id, uuid, last_updated_date):
         self.id = id
-        self.last_updated_date = last_updated_date
         self.uuid = uuid
+        self.last_updated_date = last_updated_date
         self.number_of_pages = 0
     
     ###################################################################################################
