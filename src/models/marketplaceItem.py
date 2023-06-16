@@ -24,11 +24,11 @@ class MarketplaceItemDAO:
         self.conn.commit()
 
     def read(self, marketplace, item):
-        logging.info(f'Searching for a MARKETPLACE_ITEM record for marketplace ID: { marketplace.id } | ASIN: { item.asin }!!')
+        logging.info(f'Searching for a MARKETPLACE_ITEM record for marketplace ID: { marketplace.id } | ASIN: { item.asin }!')
         try:
             self.cursor.execute("SELECT * FROM marketplace_item WHERE item_asin = ?", (item.asin,))
         except Exception as exception:
-            logging.warning(f'Failed to find MARKETPLACE_ITEM record for marketplace ID: { marketplace.id } | ASIN: { item.asin }!!')
+            logging.warning(f'Failed to find MARKETPLACE_ITEM record for marketplace ID: { marketplace.id } | ASIN: { item.asin }!')
             logging.exception(exception)
         
         row = self.cursor.fetchone()
@@ -70,12 +70,17 @@ class MarketplaceItemDAO:
             return self.read(marketplace, item)
 
     def clean_week_old(self, marketplace):
+        logging.info(f'Cleaning records from MARKETPLACE_ITEM table that are older than 1 week for marketplace ID: { marketplace.id }!')
         one_week_ago = datetime.now() - timedelta(weeks=1)
-        clean_query = '''
-            DELETE FROM marketplace_item
-            WHERE marketplace_uuid = ? AND last_seen < ?        
-        '''        
-        self.cursor.execute(clean_query, (marketplace.uuid, one_week_ago))
+        try:
+            self.cursor.execute('''
+                DELETE FROM marketplace_item
+                WHERE marketplace_uuid = ? AND last_seen < ?        
+            ''', (marketplace.uuid, one_week_ago))
+        except Exception as exception:
+            logging.info(f'Failed to clean records from MARKETPLACE_ITEM table that are older than 1 week for marketplace ID: { marketplace.id }!')
+            logging.exception(exception)
+        
         self.conn.commit()
     
     def close(self):

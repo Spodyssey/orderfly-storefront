@@ -1,6 +1,8 @@
 import logging, requests, sqlite3
 from bs4 import BeautifulSoup
 
+from models.marketplaceItem import MarketplaceItem
+
 class MarketplaceDAO:
     def __init__(self, db_file):
         self.db_file = db_file
@@ -65,6 +67,39 @@ class MarketplaceDAO:
         else:
             self.insert(marketplace)
             return self.read(marketplace)
+
+    def read_active_items(self, marketplace):
+        logging.info(f'Searching for active item records for marketplace ID: { marketplace.id }!')
+        try:            
+            self.cursor.execute('''SELECT
+                    asin,
+                    name,
+                    listing_url,
+                    marketplace_item.first_seen,
+                    marketplace_item.last_seen
+                FROM marketplace
+                JOIN marketplace_item ON marketplace.uuid = marketplace_item.marketplace_uuid
+                JOIN item ON marketplace_item.item_asin = item.asin
+                WHERE marketplace.id = ?''', (marketplace.id,))
+        except Exception as exception:
+            logging.warning(f'Failed to fetch active item records for marketplace ID: { marketplace.id }!')
+            logging.exception(exception)
+            
+        rows = self.cursor.fetchall()
+        marketplace_items = []
+        if rows:
+            for row in rows:
+                item_asin, item_name, listing_url, first_seen, last_seen = row
+                marketplace_items.append({
+                    "item_name": item_name, 
+                    "item_asin": item_asin, 
+                    "listing_url": listing_url, 
+                    "first_seen": first_seen, 
+                    "last_seen": last_seen
+                })    
+            return marketplace_items
+        else:
+            return None
 
     def close(self):
         self.conn.close()

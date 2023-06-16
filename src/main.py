@@ -55,9 +55,10 @@ def main(argv):
             itemDAO.read_and_update_or_insert(item)
             marketplaceItemDAO.read_and_update_or_insert(marketplace, item)
 
-        # TODO - Print return (Select on marketplace + marketplace_items)
-        # print(json.dumps(marketplaceItemDAO.read_with_item_info(marketplace.uuid), default=lambda x: x.__dict__))
+        # Print the found objects to console
+        print(json.dumps(marketplaceDAO.read_active_items(marketplace), default=lambda x: x.__dict__))
         # TODO - Remove marketplace items > 1 week old
+        marketplaceItemDAO.clean_week_old(marketplace)
     
     # Close database connetions
     marketplaceDAO.close()
