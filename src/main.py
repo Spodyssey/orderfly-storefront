@@ -1,5 +1,6 @@
-import datetime, getopt, json, logging, os, random, requests, sys, uuid
+import getopt, json, logging, os, random, requests, sys, uuid
 from bs4 import BeautifulSoup
+from datetime import datetime, timedelta
 from models.inventory import Inventory, InventoryDAO
 from models.item import Item, ItemDAO
 from models.marketplace import Marketplace, MarketplaceDAO
@@ -9,6 +10,7 @@ from models.marketplaceItem import MarketplaceItemDAO
 logDirectory = 'resources\\app\\logs\\'
 dataDirectory = 'resources\\app\\data\\'
 marketplaceDBDirectory = 'resources\\app\\data\\marketplace.db'
+current_date = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
 # If the logs directory does not exist, create it
 if not os.path.exists(logDirectory):
@@ -41,17 +43,17 @@ def main(argv):
 
     # Create database access objects
     marketplaceDAO = MarketplaceDAO(marketplaceDBDirectory)
-    marketplaceItemDAO = MarketplaceItemDAO(marketplaceDBDirectory)
     itemDAO = ItemDAO(marketplaceDBDirectory)
-    inventoryDAO = InventoryDAO(marketplaceDBDirectory)
-    inventoryItemDAO = InventoryItemDAO(marketplaceDBDirectory)
+    marketplaceItemDAO = MarketplaceItemDAO(marketplaceDBDirectory)
+    # inventoryDAO = InventoryDAO(marketplaceDBDirectory)
+    # inventoryItemDAO = InventoryItemDAO(marketplaceDBDirectory)
 
     # marketplace = Marketplace
     # inventory = Inventory
     # For each requested marketplace ID...
     for marketplace_id in requestedMarketplaceIDs:
         # Find / Create Marketplace object in the database
-        marketplace = marketplaceDAO.read_and_update_or_insert(Marketplace(marketplace_id, str(uuid.uuid4()), datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")))
+        marketplace = marketplaceDAO.read_and_update_or_insert(Marketplace(marketplace_id, str(uuid.uuid4()), current_date))
 
         # Find the items from the marketplace page
         items = scrapeMarketplaceItems(marketplace)
@@ -85,6 +87,10 @@ def main(argv):
         #     logging.warning(f'Failed to create a new record in the ITEM table!')
         #     logging.exception(exception)
 
+        for item in items:
+            itemDAO.read_and_update_or_insert(item)
+            # marketplaceItemDAO.read_and_update_or_insert(marketplace, item)
+
         # # Add to MARKETPLACE_ITEM table
         # try:
         #     marketplaceItemDAO.create(marketplace, items)
@@ -109,9 +115,9 @@ def main(argv):
     # Close database connetions
     marketplaceDAO.close()
     itemDAO.close()
-    inventoryDAO.close()
-    marketplaceItemDAO.close()
-    inventoryItemDAO.close()
+    # inventoryDAO.close()
+    # marketplaceItemDAO.close()
+    # inventoryItemDAO.close()
     
 
 def scrapeMarketplaceItems(marketplace):
@@ -199,13 +205,13 @@ def scrapeMarketplaceItems(marketplace):
         logging.info(f'Found { str(len(item_elements)) } items on page { str(currentPage) }')
 
         for item_element in item_elements:
+            current_date = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
             href = item_element.get('href')
             href = href.split('/ref')[0]
             listing_url = 'https://amazon.com' + href.split('`/')[0].split('">')[0]
             item_name = href.split('`/')[0].replace('/', '').split('dp')[0].replace('-', ' ')
             asin = href.split('/dp/')[1].split('/')[0]
-            last_seen_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")         
-            items.append(Item(asin, last_seen_date, listing_url, item_name))
+            items.append(Item(asin, item_name, listing_url, current_date, current_date))
         
         currentPage += 1
         
