@@ -15,6 +15,7 @@ class MarketplaceDAO:
         create_table_query = '''
             CREATE TABLE IF NOT EXISTS marketplace (
                 id TEXT,
+                name TEXT,
                 uuid TEXT,
                 last_updated_date DATE,
                 PRIMARY KEY (id)
@@ -33,20 +34,20 @@ class MarketplaceDAO:
         
         row = self.cursor.fetchone()
         if row:
-            id, uuid, last_updated_date = row
-            return Marketplace(id, uuid, last_updated_date)
+            id, name, uuid, last_updated_date = row
+            return Marketplace(id, name, uuid, last_updated_date)
         else:
             return None
 
     def insert(self, marketplace):
         logging.info(f'Inserting a MARKETPLACE record for ID: { marketplace.id }!')
         try:
-            self.cursor.execute("INSERT INTO marketplace VALUES (?, ?, ?)",
-                            (marketplace.id, marketplace.uuid, marketplace.last_updated_date))
+            self.cursor.execute("INSERT INTO marketplace VALUES (?, ?, ?, ?)",
+                            (marketplace.id, marketplace.name, marketplace.uuid, marketplace.last_updated_date))
         except Exception as exception:
             logging.warning(f'Failed to insert MARKETPLACE record for ID: { marketplace.id }!')
             logging.exception(exception)
-            
+
         self.conn.commit()
 
     def update(self, marketplace):
@@ -73,9 +74,9 @@ class MarketplaceDAO:
         logging.info(f'Searching for active item records for marketplace ID: { marketplace.id }!')
         try:            
             self.cursor.execute('''SELECT
-                    asin,
-                    name,
-                    listing_url,
+                    item.asin,
+                    item.name,
+                    item.listing_url,
                     marketplace_item.first_seen,
                     marketplace_item.last_seen
                 FROM marketplace
@@ -100,8 +101,9 @@ class MarketplaceDAO:
         self.conn.close()
 
 class Marketplace:
-    def __init__(self, id, uuid, last_updated_date):
+    def __init__(self, id, name, uuid, last_updated_date):
         self.id = id
+        self.name = name
         self.uuid = uuid
         self.last_updated_date = last_updated_date
         self.number_of_pages = 0

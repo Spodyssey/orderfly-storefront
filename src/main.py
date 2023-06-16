@@ -46,7 +46,7 @@ def main(argv):
     # For each requested marketplace ID...
     for marketplace_id in requestedMarketplaceIDs:
         # Find / Create Marketplace object in the database
-        marketplace = marketplaceDAO.read_and_update_or_insert(Marketplace(marketplace_id, str(uuid.uuid4()), current_date))
+        marketplace = marketplaceDAO.read_and_update_or_insert(Marketplace(marketplace_id, None, str(uuid.uuid4()), current_date))
 
         # Find the items from the marketplace page
         items = scrapeMarketplaceItems(marketplace)
