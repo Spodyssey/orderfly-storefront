@@ -36,7 +36,7 @@ def main(argv):
             requestedMarketplaceIDs = arg.replace('\\', '').split(',')
             
     # Set logging level
-    logging.basicConfig(filename=logDirectory + 'orderfly-storefront.log', encoding='utf-8', level=logging_level, format='[%(levelname)s] %(asctime)s: %(message)s')
+    logging.basicConfig(filename=logDirectory + 'marketplace-script.log', encoding='utf-8', level=logging_level, format='[%(levelname)s] %(asctime)s: %(message)s')
 
     # Create database access objects
     marketplaceDAO = MarketplaceDAO(marketplaceDBDirectory)

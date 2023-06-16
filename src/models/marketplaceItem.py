@@ -52,8 +52,8 @@ class MarketplaceItemDAO:
     def update(self, marketplace, item):
         logging.info(f'Updating a MARKETPLACE_ITEM record for marketplace ID: { marketplace.id } | ASIN: { item.asin }!')
         try:
-            self.cursor.execute("UPDATE marketplace_item SET last_seen_date = ? WHERE marketplace_uuid = ? AND asin = ?",
-                (marketplace.uuid, item.asin))
+            self.cursor.execute("UPDATE marketplace_item SET last_seen = ? WHERE marketplace_uuid = ? AND item_asin = ?",
+                (item.last_seen, marketplace.uuid, item.asin))
         except Exception as exception:
             logging.warning(f'Failed to update MARKETPLACE_ITEM record for marketplace ID: { marketplace.id } | ASIN: { item.asin }!')
             logging.exception(exception)
